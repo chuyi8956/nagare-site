@@ -88,7 +88,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <input id="stamp-file" type="file" accept="image/png" style="display:none">
 
 <script>
-// ── Constants ──
+// ── Constants & Auto Dates ──
 const DOC_TYPES=["請求書","注文書","見積書","納品書","領収書"];
 const TAX_RATES=[{label:"10%",value:0.1},{label:"8%",value:0.08},{label:"免税 (0%)",value:0}];
 const HONORIFICS=["殿","御中","様"];
@@ -96,13 +96,25 @@ const STORAGE_KEY="nagare_invoice_settings";
 const CLIENT_KEY="nagare_client_book";
 const fmt=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
 
+// 自动计算日期和单号
+const _d = new Date();
+const _todayStr = `${_d.getFullYear()}年${_d.getMonth()+1}月${_d.getDate()}日`;
+// 下下个月的最后一天
+const _due = new Date(_d.getFullYear(), _d.getMonth() + 3, 0); 
+const _dueStr = `${_due.getFullYear()}年${_due.getMonth()+1}月${_due.getDate()}日`;
+// 自动生成单号前缀，如 20260415-001
+const _invNo = `${_d.getFullYear()}${String(_d.getMonth()+1).padStart(2,'0')}${String(_d.getDate()).padStart(2,'0')}-001`;
+
 // ── State ──
 const DEFAULT_LOGO = './logo.png';
 const DEFAULT_STAMP = './stamp.png';
 
 let state = {
-  docType:"請求書", invoiceNo:"20260401-001", issueDate:"2026年3月31日",
-  dueDate:"2026年5月25日", projectName:"システム設計開発",
+  docType:"請求書", 
+  invoiceNo:_invNo, 
+  issueDate:_todayStr,
+  dueDate:_dueStr, 
+  projectName:"システム設計開発",
   clientName:"日本恒研株式会社", clientHonorific:"殿",
   issuerName:"株式会社流れ", issuerZip:"〒179-0074",
   issuerAddress:"東京都練馬区春日町六丁目16番11号フオ一チュン光が丘283号室",
@@ -124,6 +136,43 @@ let state = {
 let clientBook = [];
 let showClientPicker = false;
 let clientSearch = "";
+
+// ── Dynamic Texts ──
+function getDynamicTexts(type) {
+  switch(type) {
+    case '見積書': return { 
+      greeting: '下記のとおりお見積申し上げます。', 
+      amtLabel: 'お見積金額', 
+      dateLabel: '見積日', 
+      noLabel: '見積番号' 
+    };
+    case '納品書': return { 
+      greeting: '下記のとおり納品いたしました。', 
+      amtLabel: '合計金額', 
+      dateLabel: '', 
+      noLabel: '納品番号' 
+    };
+    case '注文書': return { 
+      greeting: '下記のとおりご注文いたします。', 
+      amtLabel: '発注金額', 
+      dateLabel: '注文書発行日', 
+      noLabel: '注文書番号' 
+    };
+    case '領収書': return { 
+      greeting: '下記金額を正に領収いたしました。', 
+      amtLabel: '領収金額', 
+      dateLabel: '発行日', 
+      noLabel: '領収番号' 
+    };
+    case '請求書':
+    default: return { 
+      greeting: '下記のとおりご請求申し上げます。', 
+      amtLabel: 'ご請求金額', 
+      dateLabel: '請求日', 
+      noLabel: '請求番号' 
+    };
+  }
+}
 
 // ── Persistence ──
 function loadSettings(){
@@ -217,15 +266,15 @@ function renderBasic(){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${field("発行日", `<input style="${inp}" value="${escH(state.issueDate)}" oninput="state.issueDate=this.value;renderPreview()">`)}
-      ${field("請求番号", `<input style="${inp}" value="${escH(state.invoiceNo)}" oninput="state.invoiceNo=this.value;renderPreview()">`)}
-      ${field("お支払い期限", `<input style="${inp}" value="${escH(state.dueDate)}" oninput="state.dueDate=this.value;renderPreview()">`)}
-      ${field("案件名", `<input style="${inp}" value="${escH(state.projectName)}" oninput="state.projectName=this.value;renderPreview()">`)}
+      ${field("書類番号", `<input style="${inp}" value="${escH(state.invoiceNo)}" oninput="state.invoiceNo=this.value;renderPreview()">`)}
+      ${field("お支払い期限", `<input style="${inp}" placeholder="空欄で非表示" value="${escH(state.dueDate)}" oninput="state.dueDate=this.value;renderPreview()">`)}
+      ${field("案件名", `<input style="${inp}" placeholder="空欄で非表示" value="${escH(state.projectName)}" oninput="state.projectName=this.value;renderPreview()">`)}
     </div>
   </div>
 
   <div style="${section}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:#222;border-left:3px solid #1a1a1a;padding-left:8px">請求先（クライアント）</div>
+      <div style="font-size:12px;font-weight:700;color:#222;border-left:3px solid #1a1a1a;padding-left:8px">宛先（クライアント等）</div>
       <div style="display:flex;gap:5px">
         <button onclick="toggleClientPicker()" style="padding:3px 9px;background:${showClientPicker?'#1a1a1a':'#fff'};color:${showClientPicker?'#fff':'#333'};border:1px solid #ccc;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit">📋 選択</button>
         <button onclick="saveCurrentClient()" style="padding:3px 9px;background:#fff;color:#333;border:1px solid #ccc;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit">💾 保存</button>
@@ -235,18 +284,18 @@ function renderBasic(){
     <div style="background:#f5f5f3;border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:10px">
       <input style="${inp};margin-bottom:6px" placeholder="会社名で検索..." value="${escH(clientSearch)}" oninput="clientSearch=this.value;renderAll()">
       ${clientBook.filter(c=>c.name.includes(clientSearch)).length===0
-        ? `<div style="font-size:11px;color:#aaa;text-align:center;padding:8px">保存済みクライアントなし</div>`
+        ? `<div style="font-size:11px;color:#aaa;text-align:center;padding:8px">保存済みデータなし</div>`
         : rowsHtml}
     </div>`:''}
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
       ${field("会社名", `<input style="${inp}" value="${escH(state.clientName)}" oninput="state.clientName=this.value;renderPreview()">`)}
       <div>${lbl("敬称")}<select style="${inp}" onchange="state.clientHonorific=this.value;renderPreview()">${HONORIFICS.map(h=>`<option ${state.clientHonorific===h?'selected':''}>${h}</option>`).join('')}</select></div>
     </div>
-    ${clientBook.length>0&&!showClientPicker?`<div style="font-size:10px;color:#888;margin-top:5px">💡 「選択」で保存済みクライアントを呼び出せます（現在 ${clientBook.length} 件）</div>`:''}
+    ${clientBook.length>0&&!showClientPicker?`<div style="font-size:10px;color:#888;margin-top:5px">💡 「選択」で保存済みデータを呼び出せます（現在 ${clientBook.length} 件）</div>`:''}
   </div>
 
   <div style="${section}">
-    <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">請求元（自社情報）</div>
+    <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">発行元（自社情報）</div>
     ${[["会社名","issuerName","text"],["〒郵便番号","issuerZip","text"],["住所","issuerAddress","area"],["TEL","issuerTel","text"],["メール","issuerEmail","text"],["登録番号","issuerRegNo","text"],["振込先","issuerBank","area"]].map(([l,k,t])=>field(l,
       t==='area'
         ? `<textarea style="${inp};height:48px;resize:vertical" oninput="state.${k}=this.value;saveSettings();renderPreview()">${escH(state[k])}</textarea>`
@@ -286,7 +335,7 @@ function renderItems(){
       </div>
       <div style="text-align:right;margin-top:5px;font-size:11px;font-weight:700">小計：${fmt(r.qty*r.unitPrice)}</div>
     </div>`).join('')}
-    <div class="total-summary" style="background:#1a1a1a;color:#fff;border-radius:6px;padding:10px 14px;font-size:11px">
+    <div style="background:#1a1a1a;color:#fff;border-radius:6px;padding:10px 14px;font-size:11px">
       <div style="display:flex;justify-content:space-between"><span>小計</span><span>${fmt(subtotal)}</span></div>
       <div style="display:flex;justify-content:space-between;opacity:.7"><span>消費税 (${taxLbl})</span><span>${fmt(tax)}</span></div>
       <div style="display:flex;justify-content:space-between;font-weight:700;font-size:13px;margin-top:4px;border-top:1px solid #444;padding-top:4px"><span>合計</span><span>${fmt(total)}</span></div>
@@ -337,6 +386,8 @@ function renderPreview(){
   const emptyRows=Math.max(0,8-state.rows.length);
   const logoH=`${state.logoSize}px`, logoW=`${Math.round(state.logoSize*3.85)}px`;
   const stSz=`${state.stampSize}px`;
+  
+  const texts = getDynamicTexts(state.docType);
 
   const logoBlock = state.logoUrl
     ? `<img src="${state.logoUrl}" alt="logo" style="max-height:${logoH};max-width:${logoW};width:auto;object-fit:contain;display:block">`
@@ -360,8 +411,8 @@ function renderPreview(){
 
   document.getElementById('invoice-preview').innerHTML = `
     <div style="text-align:right;font-size:10px;margin-bottom:4mm">
-      <div>${escH(state.docType)}発行日：　${escH(state.issueDate)}</div>
-      <div>請求番号：　${escH(state.invoiceNo)}</div>
+      <div>${texts.dateLabel ? escH(texts.dateLabel) + '：　' : ''}${escH(state.issueDate)}</div>
+      <div>${escH(texts.noLabel)}：　${escH(state.invoiceNo)}</div>
     </div>
     <div style="text-align:center;font-size:28px;font-weight:bold;letter-spacing:8px;margin-bottom:6mm">${escH(state.docType)}</div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4mm">
@@ -370,9 +421,9 @@ function renderPreview(){
           ${escH(state.clientName)}　<span style="font-size:18px">${escH(state.clientHonorific)}</span>
         </div>
         ${state.projectName?`<div style="font-size:10px;margin-bottom:2mm">案件名：${escH(state.projectName)}</div>`:''}
-        <div style="font-size:10px;margin-bottom:1mm">下記のとおりご請求申し上げます。</div>
-        <div style="font-size:10px">ご請求金額</div>
-        <div style="font-size:16px;font-weight:bold;border-bottom:1.5px solid #111;display:inline-block;min-width:140px;text-align:right;margin-top:1mm">${fmt(total)}</div>
+        <div style="font-size:10px;margin-bottom:1mm">${escH(texts.greeting)}</div>
+        <div style="font-size:10px">${escH(texts.amtLabel)}</div>
+        <div style="font-size:16px;font-weight:bold;border-bottom:1.5px solid #111;display:inline-block;min-width:140px;text-align:right;margin-top:1mm">￥${Math.round(total).toLocaleString("ja-JP")} -</div>
         ${state.dueDate?`<div style="font-size:9.5px;margin-top:2mm">お支払い期限：${escH(state.dueDate)}</div>`:''}
       </div>
       <div style="text-align:left;font-size:9.5px;line-height:1.7;position:relative;min-width:180px">
@@ -394,15 +445,15 @@ function renderPreview(){
           <th style="padding:5px 8px;text-align:center;border:1px solid #555;width:38%">${escH(state.colHeader)}</th>
           <th style="padding:5px 4px;text-align:center;border:1px solid #555;width:8%">数量</th>
           <th style="padding:5px 4px;text-align:center;border:1px solid #555;width:8%">単位</th>
-          <th style="padding:5px 8px;text-align:center;border:1px solid #555;width:23%">月額単価</th>
-          <th style="padding:5px 8px;text-align:center;border:1px solid #555;width:23%">金　　額</th>
+          <th style="padding:5px 8px;text-align:center;border:1px solid #555;width:23%">単価</th>
+          <th style="padding:5px 8px;text-align:center;border:1px solid #555;width:23%">金額</th>
         </tr>
       </thead>
       <tbody>
         ${tableRows}${emptyRowsHtml}
-        <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">小　　　計</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right">${fmt(subtotal)}</td></tr>
-        <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">消　費　税（${taxLbl}）</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right">${fmt(tax)}</td></tr>
-        <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">合　　　計</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right;font-weight:bold">${fmt(total)}</td></tr>
+        <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">小計</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right">${fmt(subtotal)}</td></tr>
+        <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">消費税（${taxLbl}）</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right">${fmt(tax)}</td></tr>
+        <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">合計</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right;font-weight:bold">${fmt(total)}</td></tr>
       </tbody>
     </table>
     <div style="margin-top:8mm;font-size:9.5px;line-height:1.8">
@@ -431,18 +482,9 @@ function updateRow(id,field,val){
   if(!r)return;
   r[field]=(field==='qty'||field==='unitPrice')?Number(val)||0:val;
   renderPreview();
-  
   // update items subtotal display without full re-render
-  const el=document.querySelector('.total-summary');
-  if(el) {
-    const subtotal=getSubtotal(), tax=getTax(), total=getTotal();
-    const taxLbl=TAX_RATES.find(t=>t.value===state.taxRate)?.label||"";
-    el.innerHTML = `
-      <div style="display:flex;justify-content:space-between"><span>小計</span><span>${fmt(subtotal)}</span></div>
-      <div style="display:flex;justify-content:space-between;opacity:.7"><span>消費税 (${taxLbl})</span><span>${fmt(tax)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:13px;margin-top:4px;border-top:1px solid #444;padding-top:4px"><span>合計</span><span>${fmt(total)}</span></div>
-    `;
-  }
+  const el=document.getElementById('panel-items');
+  if(el.style.display!=='none') document.getElementById('panel-items').innerHTML=renderItems();
 }
 function addRow(){
   state.rows.push({id:Date.now()+Math.random(),name:'',qty:1,unit:'人月',unitPrice:0});
@@ -481,7 +523,7 @@ function saveCurrentClient(){
 }
 function doPrint(){ window.print(); }
 function resetSettings(){
-  if(!confirm('請求元・ロゴ・印章の保存設定を初期化しますか？'))return;
+  if(!confirm('保存設定を初期化しますか？'))return;
   localStorage.removeItem(STORAGE_KEY);
   location.reload();
 }
