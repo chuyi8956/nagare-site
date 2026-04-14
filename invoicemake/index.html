@@ -98,11 +98,11 @@ const fmt=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
 
 // 自动计算日期和单号
 const _d = new Date();
-const _todayStr = `${_d.getFullYear()}年${_d.getMonth()+1}月${_d.getDate()}日`;
-// 下下个月的最后一天
+const _todayStr = `${_d.getFullYear()}年${String(_d.getMonth()+1).padStart(2,'0')}月${String(_d.getDate()).padStart(2,'0')}日`;
+// 下下个月的最后一天（默认支付期限）
 const _due = new Date(_d.getFullYear(), _d.getMonth() + 3, 0); 
-const _dueStr = `${_due.getFullYear()}年${_due.getMonth()+1}月${_due.getDate()}日`;
-// 自动生成单号前缀，如 20260415-001
+const _dueStr = `${_due.getFullYear()}年${String(_due.getMonth()+1).padStart(2,'0')}月${String(_due.getDate()).padStart(2,'0')}日`;
+// 自动生成单号前缀
 const _invNo = `${_d.getFullYear()}${String(_d.getMonth()+1).padStart(2,'0')}${String(_d.getDate()).padStart(2,'0')}-001`;
 
 // ── State ──
@@ -144,32 +144,37 @@ function getDynamicTexts(type) {
       greeting: '下記のとおりお見積申し上げます。', 
       amtLabel: 'お見積金額', 
       dateLabel: '見積日', 
-      noLabel: '見積番号' 
+      noLabel: '見積番号',
+      deadlineLabel: '有効期限' // 报价单显示有效期限
     };
     case '納品書': return { 
       greeting: '下記のとおり納品いたしました。', 
       amtLabel: '合計金額', 
       dateLabel: '', 
-      noLabel: '納品番号' 
+      noLabel: '納品番号',
+      deadlineLabel: '' // 隐藏期限
     };
     case '注文書': return { 
       greeting: '下記のとおりご注文いたします。', 
       amtLabel: '発注金額', 
       dateLabel: '注文書発行日', 
-      noLabel: '注文書番号' 
+      noLabel: '注文書番号',
+      deadlineLabel: '' // 隐藏期限
     };
     case '領収書': return { 
       greeting: '下記金額を正に領収いたしました。', 
       amtLabel: '領収金額', 
       dateLabel: '発行日', 
-      noLabel: '領収番号' 
+      noLabel: '領収番号',
+      deadlineLabel: '' // 隐藏期限
     };
     case '請求書':
     default: return { 
       greeting: '下記のとおりご請求申し上げます。', 
       amtLabel: 'ご請求金額', 
       dateLabel: '請求日', 
-      noLabel: '請求番号' 
+      noLabel: '請求番号',
+      deadlineLabel: 'お支払い期限' // 账单显示支付期限
     };
   }
 }
@@ -255,6 +260,8 @@ function renderBasic(){
       <button onclick="deleteClient('${c.name.replace(/'/g,"\\'")}','${c.honorific}')" style="background:none;border:none;color:#c00;font-size:11px;cursor:pointer;padding:0 4px">✕</button>
     </div>`).join('');
   
+  const texts = getDynamicTexts(state.docType);
+
   return `
   <div style="${section}">
     <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">書類設定</div>
@@ -267,7 +274,7 @@ function renderBasic(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${field("発行日", `<input style="${inp}" value="${escH(state.issueDate)}" oninput="state.issueDate=this.value;renderPreview()">`)}
       ${field("書類番号", `<input style="${inp}" value="${escH(state.invoiceNo)}" oninput="state.invoiceNo=this.value;renderPreview()">`)}
-      ${field("お支払い期限", `<input style="${inp}" placeholder="空欄で非表示" value="${escH(state.dueDate)}" oninput="state.dueDate=this.value;renderPreview()">`)}
+      ${texts.deadlineLabel ? field(texts.deadlineLabel, `<input style="${inp}" placeholder="空欄で非表示" value="${escH(state.dueDate)}" oninput="state.dueDate=this.value;renderPreview()">`) : '<div></div>'}
       ${field("案件名", `<input style="${inp}" placeholder="空欄で非表示" value="${escH(state.projectName)}" oninput="state.projectName=this.value;renderPreview()">`)}
     </div>
   </div>
@@ -424,7 +431,7 @@ function renderPreview(){
         <div style="font-size:10px;margin-bottom:1mm">${escH(texts.greeting)}</div>
         <div style="font-size:10px">${escH(texts.amtLabel)}</div>
         <div style="font-size:16px;font-weight:bold;border-bottom:1.5px solid #111;display:inline-block;min-width:140px;text-align:right;margin-top:1mm">￥${Math.round(total).toLocaleString("ja-JP")} -</div>
-        ${state.dueDate?`<div style="font-size:9.5px;margin-top:2mm">お支払い期限：${escH(state.dueDate)}</div>`:''}
+        ${state.dueDate && texts.deadlineLabel ?`<div style="font-size:9.5px;margin-top:2mm">${escH(texts.deadlineLabel)}：${escH(state.dueDate)}</div>`:''}
       </div>
       <div style="text-align:left;font-size:9.5px;line-height:1.7;position:relative;min-width:180px">
         <div style="margin-bottom:3mm">${logoBlock}</div>
@@ -476,7 +483,24 @@ function renderAll(){
 
 // ── Helpers ──
 function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function setDocType(t){ state.docType=t; renderAll(); }
+function setDocType(t){ 
+  state.docType=t; 
+
+  // 根据选择的书类，智能切换期限日期
+  const d = new Date();
+  const nextNextMonthEnd = new Date(d.getFullYear(), d.getMonth() + 3, 0);
+  const nextNextMonthEndStr = `${nextNextMonthEnd.getFullYear()}年${String(nextNextMonthEnd.getMonth()+1).padStart(2,'0')}月${String(nextNextMonthEnd.getDate()).padStart(2,'0')}日`;
+  const thisMonthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const thisMonthEndStr = `${thisMonthEnd.getFullYear()}年${String(thisMonthEnd.getMonth()+1).padStart(2,'0')}月${String(thisMonthEnd.getDate()).padStart(2,'0')}日`;
+
+  if (t === '請求書' && (!state.dueDate || state.dueDate === thisMonthEndStr)) {
+     state.dueDate = nextNextMonthEndStr; // 账单默认下下月底
+  } else if (t === '見積書' && (!state.dueDate || state.dueDate === nextNextMonthEndStr)) {
+     state.dueDate = thisMonthEndStr; // 报价单默认当月底
+  }
+
+  renderAll(); 
+}
 function updateRow(id,field,val){
   const r=state.rows.find(r=>r.id===id);
   if(!r)return;
