@@ -11,17 +11,18 @@
 html,body{height:100%;background:#f0f0ed;font-family:'Noto Sans JP',sans-serif}
 input:focus,textarea:focus,select:focus{border-color:#1a1a1a!important;background:#fff!important;outline:none}
 button:focus{outline:none}
-.row-del:hover{background:#fee!important}
+.row-btn:hover{background:#eee!important}
+.row-del:hover{background:#fee!important;color:#c00!important}
 input[type=range]{-webkit-appearance:none;height:4px;background:#ddd;border-radius:2px;border:none;padding:0;cursor:pointer}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#1a1a1a;cursor:pointer}
 
 /* ── Layout ── */
 #app-container{display:flex;height:100vh;overflow:hidden}
-#left-panel{width:380px;min-width:360px;background:#f7f6f3;border-right:1px solid #ddd;overflow-y:auto;padding:16px;flex-shrink:0}
+#left-panel{width:380px;min-width:360px;background:#f7f6f3;border-right:1px solid #ddd;overflow-y:auto;padding:16px;flex-shrink:0;position:relative}
 #right-panel{flex:1;background:#e8e6e1;overflow-y:auto;display:flex;justify-content:center;padding:24px;align-items:flex-start}
 #preview-wrap{box-shadow:0 4px 32px rgba(0,0,0,.18);background:#fff}
 
-/* ── Mobile: stack vertically, preview becomes a modal/tab ── */
+/* ── Mobile ── */
 @media(max-width:700px){
   #app-container{flex-direction:column;height:auto}
   #left-panel{width:100%;min-width:0;border-right:none;border-bottom:1px solid #ddd;overflow-y:visible;max-height:none}
@@ -42,14 +43,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   #left-panel, #mobile-toggle, button { display: none !important; }
   #right-panel { display: block; padding: 0; background: none; height: auto; overflow: visible; }
   #preview-wrap { box-shadow: none; transform: none !important; margin: 0 !important; height: auto; overflow: visible; }
-  #invoice-preview { 
-    position: static; 
-    width: 210mm; 
-    padding: 15mm !important; 
-    margin: 0 auto; 
-    box-shadow: none;
-    visibility: visible;
-  }
+  #invoice-preview { position: static; width: 210mm; padding: 15mm !important; margin: 0 auto; box-shadow: none; visibility: visible; }
 }
 </style>
 </head>
@@ -72,9 +66,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div id="panel-basic"></div>
     <div id="panel-items" style="display:none"></div>
     <div id="panel-extra" style="display:none"></div>
-    <button onclick="doPrint()" style="width:100%;padding:12px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;margin-top:4px;font-family:inherit">🖨 PDF として保存・印刷</button>
-    <div style="font-size:9.5px;color:#888;text-align:center;margin-top:6px">ブラウザの印刷ダイアログから「PDFとして保存」を選択してください</div>
-    <button onclick="resetSettings()" style="width:100%;padding:7px;background:transparent;color:#999;border:1px solid #ddd;border-radius:6px;font-size:11px;cursor:pointer;margin-top:6px;font-family:inherit">🗑 保存済み設定を初期化</button>
+    
+    <div style="margin-top:16px;border-top:1px solid #ddd;padding-top:16px">
+      <button onclick="doPrint()" style="width:100%;padding:12px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.2)">🖨 PDF として保存・印刷</button>
+      <div style="font-size:9.5px;color:#888;text-align:center;margin-top:6px;margin-bottom:16px">ブラウザの印刷ダイアログから「PDFとして保存」を選択</div>
+      
+      <div style="display:flex;gap:6px">
+        <button onclick="exportData()" style="flex:1;padding:7px;background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit">💾 バックアップ (書出)</button>
+        <button onclick="document.getElementById('import-file').click()" style="flex:1;padding:7px;background:#f0f0f0;color:#333;border:1px solid #ccc;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit">📂 データ復元 (読込)</button>
+      </div>
+      <button onclick="resetSettings()" style="width:100%;padding:7px;background:transparent;color:#aaa;border:1px solid #ddd;border-radius:6px;font-size:10px;cursor:pointer;margin-top:6px;font-family:inherit">🗑 すべての初期化</button>
+    </div>
   </div>
 
   <div id="right-panel">
@@ -86,36 +88,29 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
 <input id="logo-file" type="file" accept="image/png" style="display:none">
 <input id="stamp-file" type="file" accept="image/png" style="display:none">
+<input id="import-file" type="file" accept=".json" style="display:none" onchange="importData(event)">
 
 <script>
 // ── Constants & Auto Dates ──
 const DOC_TYPES=["請求書","注文書","見積書","納品書","領収書"];
 const TAX_RATES=[{label:"10%",value:0.1},{label:"8%",value:0.08},{label:"免税 (0%)",value:0}];
-const HONORIFICS=["殿","御中","様"];
+const HONORIFICS=["御中","殿","様"];
 const STORAGE_KEY="nagare_invoice_settings";
 const CLIENT_KEY="nagare_client_book";
 const fmt=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
 
-// 自动计算日期和单号
 const _d = new Date();
 const _todayStr = `${_d.getFullYear()}年${String(_d.getMonth()+1).padStart(2,'0')}月${String(_d.getDate()).padStart(2,'0')}日`;
-// 下下个月的最后一天（默认支付期限）
 const _due = new Date(_d.getFullYear(), _d.getMonth() + 3, 0); 
 const _dueStr = `${_due.getFullYear()}年${String(_due.getMonth()+1).padStart(2,'0')}月${String(_due.getDate()).padStart(2,'0')}日`;
-// 自动生成单号前缀
 const _invNo = `${_d.getFullYear()}${String(_d.getMonth()+1).padStart(2,'0')}${String(_d.getDate()).padStart(2,'0')}-001`;
 
-// ── State ──
 const DEFAULT_LOGO = './logo.png';
 const DEFAULT_STAMP = './stamp.png';
 
 let state = {
-  docType:"請求書", 
-  invoiceNo:_invNo, 
-  issueDate:_todayStr,
-  dueDate:_dueStr, 
-  projectName:"システム設計開発",
-  clientName:"日本恒研株式会社", clientHonorific:"殿",
+  docType:"請求書", invoiceNo:_invNo, issueDate:_todayStr, dueDate:_dueStr, 
+  projectName:"システム設計開発", clientName:"日本恒研株式会社", clientHonorific:"御中",
   issuerName:"株式会社流れ", issuerZip:"〒179-0074",
   issuerAddress:"東京都練馬区春日町六丁目16番11号フオ一チュン光が丘283号室",
   issuerTel:"TEL：03-6262-1587", issuerEmail:"chuyi@nagare-jp.com",
@@ -124,14 +119,9 @@ let state = {
   rows:[
     {id:1,name:"于慶華",qty:1,unit:"人月",unitPrice:700000},
     {id:2,name:"陶然",qty:1,unit:"人月",unitPrice:570000},
-    {id:3,name:"朱文淵",qty:1,unit:"人月",unitPrice:700000},
-    {id:4,name:"楊景雄",qty:1,unit:"人月",unitPrice:660000},
-    {id:5,name:"程宇昕",qty:1,unit:"人月",unitPrice:650000},
   ],
-  taxRate:0.1, colHeader:"作業従事者", remarks:"",
-  logoUrl:DEFAULT_LOGO, stampUrl:DEFAULT_STAMP,
-  logoSize:72, stampSize:72,
-  activeTab:"basic"
+  taxRate:0.1, withholdingTax:false, colHeader:"作業従事者", remarks:"",
+  logoUrl:DEFAULT_LOGO, stampUrl:DEFAULT_STAMP, logoSize:72, stampSize:72, activeTab:"basic"
 };
 let clientBook = [];
 let showClientPicker = false;
@@ -140,91 +130,68 @@ let clientSearch = "";
 // ── Dynamic Texts ──
 function getDynamicTexts(type) {
   switch(type) {
-    case '見積書': return { 
-      greeting: '下記のとおりお見積申し上げます。', 
-      amtLabel: 'お見積金額', 
-      dateLabel: '見積日', 
-      noLabel: '見積番号',
-      deadlineLabel: '有効期限' // 报价单显示有效期限
-    };
-    case '納品書': return { 
-      greeting: '下記のとおり納品いたしました。', 
-      amtLabel: '合計金額', 
-      dateLabel: '', 
-      noLabel: '納品番号',
-      deadlineLabel: '' // 隐藏期限
-    };
-    case '注文書': return { 
-      greeting: '下記のとおりご注文いたします。', 
-      amtLabel: '発注金額', 
-      dateLabel: '注文書発行日', 
-      noLabel: '注文書番号',
-      deadlineLabel: '' // 隐藏期限
-    };
-    case '領収書': return { 
-      greeting: '下記金額を正に領収いたしました。', 
-      amtLabel: '領収金額', 
-      dateLabel: '発行日', 
-      noLabel: '領収番号',
-      deadlineLabel: '' // 隐藏期限
-    };
-    case '請求書':
-    default: return { 
-      greeting: '下記のとおりご請求申し上げます。', 
-      amtLabel: 'ご請求金額', 
-      dateLabel: '請求日', 
-      noLabel: '請求番号',
-      deadlineLabel: 'お支払い期限' // 账单显示支付期限
-    };
+    case '見積書': return { greeting: '下記のとおりお見積申し上げます。', amtLabel: 'お見積金額', dateLabel: '見積日', noLabel: '見積番号', deadlineLabel: '有効期限' };
+    case '納品書': return { greeting: '下記のとおり納品いたしました。', amtLabel: '合計金額', dateLabel: '', noLabel: '納品番号', deadlineLabel: '' };
+    case '注文書': return { greeting: '下記のとおりご注文いたします。', amtLabel: '発注金額', dateLabel: '注文書発行日', noLabel: '注文書番号', deadlineLabel: '' };
+    case '領収書': return { greeting: '下記金額を正に領収いたしました。', amtLabel: '領収金額', dateLabel: '発行日', noLabel: '領収番号', deadlineLabel: '' };
+    case '請求書': default: return { greeting: '下記のとおりご請求申し上げます。', amtLabel: 'ご請求金額', dateLabel: '請求日', noLabel: '請求番号', deadlineLabel: 'お支払い期限' };
   }
 }
 
-// ── Persistence ──
+// ── Data Management ──
 function loadSettings(){
   try{
     const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
-    if(s.issuerName) state.issuerName=s.issuerName;
-    if(s.issuerZip) state.issuerZip=s.issuerZip;
-    if(s.issuerAddress) state.issuerAddress=s.issuerAddress;
-    if(s.issuerTel) state.issuerTel=s.issuerTel;
-    if(s.issuerEmail) state.issuerEmail=s.issuerEmail;
-    if(s.issuerRegNo) state.issuerRegNo=s.issuerRegNo;
-    if(s.issuerBank) state.issuerBank=s.issuerBank;
-    if(s.logoUrl) state.logoUrl=s.logoUrl;
-    if(s.stampUrl) state.stampUrl=s.stampUrl;
-    if(s.logoSize) state.logoSize=s.logoSize;
-    if(s.stampSize) state.stampSize=s.stampSize;
-    if(s.colHeader) state.colHeader=s.colHeader;
-    if(s.taxRate!==undefined) state.taxRate=s.taxRate;
+    ['issuerName','issuerZip','issuerAddress','issuerTel','issuerEmail','issuerRegNo','issuerBank','logoUrl','stampUrl','logoSize','stampSize','colHeader','taxRate','withholdingTax'].forEach(k=>{
+      if(s[k]!==undefined) state[k]=s[k];
+    });
   }catch(e){}
-  try{
-    const cb=localStorage.getItem(CLIENT_KEY);
-    if(cb) clientBook=JSON.parse(cb);
-  }catch(e){}
+  try{ const cb=localStorage.getItem(CLIENT_KEY); if(cb) clientBook=JSON.parse(cb); }catch(e){}
 }
 function saveSettings(){
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      issuerName:state.issuerName, issuerZip:state.issuerZip,
-      issuerAddress:state.issuerAddress, issuerTel:state.issuerTel,
-      issuerEmail:state.issuerEmail, issuerRegNo:state.issuerRegNo,
-      issuerBank:state.issuerBank,
-      logoUrl:state.logoUrl, stampUrl:state.stampUrl,
-      logoSize:state.logoSize, stampSize:state.stampSize,
-      colHeader:state.colHeader, taxRate:state.taxRate
-    }));
+    const s = {};
+    ['issuerName','issuerZip','issuerAddress','issuerTel','issuerEmail','issuerRegNo','issuerBank','logoUrl','stampUrl','logoSize','stampSize','colHeader','taxRate','withholdingTax'].forEach(k=>s[k]=state[k]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
   }catch(e){}
 }
-function saveClientBook(){
-  try{ localStorage.setItem(CLIENT_KEY, JSON.stringify(clientBook)); }catch(e){}
+function saveClientBook(){ try{ localStorage.setItem(CLIENT_KEY, JSON.stringify(clientBook)); }catch(e){} }
+
+function exportData(){
+  const data = {
+    settings: JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}"),
+    clients: JSON.parse(localStorage.getItem(CLIENT_KEY)||"[]")
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `nagare_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+}
+function importData(e){
+  const f = e.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(data.settings) localStorage.setItem(STORAGE_KEY, JSON.stringify(data.settings));
+      if(data.clients) localStorage.setItem(CLIENT_KEY, JSON.stringify(data.clients));
+      alert('データを正常に復元しました。画面を更新します。');
+      location.reload();
+    } catch(err) { alert('ファイルの読み込みに失敗しました。形式を確認してください。'); }
+  };
+  reader.readAsText(f);
+  e.target.value = '';
 }
 
 // ── Compute ──
 function getSubtotal(){ return state.rows.reduce((s,r)=>s+r.qty*r.unitPrice,0); }
 function getTax(){ return Math.round(getSubtotal()*state.taxRate); }
-function getTotal(){ return getSubtotal()+getTax(); }
+function getWithholding(){ return state.withholdingTax ? Math.floor(getSubtotal() * 0.1021) : 0; }
+function getTotal(){ return getSubtotal() + getTax() - getWithholding(); }
 
-// ── Mobile panel toggle ──
+// ── UI Control ──
 function showPanel(p){
   document.getElementById('btn-edit').classList.toggle('active', p==='edit');
   document.getElementById('btn-preview').classList.toggle('active', p==='preview');
@@ -233,8 +200,6 @@ function showPanel(p){
   if(p==='edit'){ document.getElementById('panel-'+state.activeTab).style.display=''; document.getElementById('right-panel').classList.remove('show-mobile'); }
   else { document.getElementById('right-panel').classList.add('show-mobile'); }
 }
-
-// ── Tabs ──
 function showTab(tab){
   state.activeTab=tab;
   ['basic','items','extra'].forEach(t=>{
@@ -246,22 +211,19 @@ function showTab(tab){
   });
 }
 
-// ── Styles helpers ──
+// ── Render Helpers ──
 const inp="width:100%;padding:6px 8px;border:1px solid #d0d0d0;border-radius:4px;font-size:12px;background:#fafafa;box-sizing:border-box;font-family:inherit";
 const section="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:14px;margin-bottom:10px";
 function lbl(text){ return `<div style="font-size:11px;color:#555;margin-bottom:3px;font-weight:500">${text}</div>`; }
 function field(lbl_text, inp_html){ return `<div style="margin-bottom:7px">${lbl(lbl_text)}${inp_html}</div>`; }
 
-// ── Render BASIC tab ──
 function renderBasic(){
   let rowsHtml = clientBook.filter(c=>c.name.includes(clientSearch)).map(c=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 6px;border-radius:4px;background:#fff;border:1px solid #eee;margin-bottom:4px">
       <span style="font-size:12px;flex:1;cursor:pointer" onclick="loadClient('${c.name.replace(/'/g,"\\'")}','${c.honorific}')">${c.name}　${c.honorific}</span>
       <button onclick="deleteClient('${c.name.replace(/'/g,"\\'")}','${c.honorific}')" style="background:none;border:none;color:#c00;font-size:11px;cursor:pointer;padding:0 4px">✕</button>
     </div>`).join('');
-  
   const texts = getDynamicTexts(state.docType);
-
   return `
   <div style="${section}">
     <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">書類設定</div>
@@ -278,7 +240,6 @@ function renderBasic(){
       ${field("案件名", `<input style="${inp}" placeholder="空欄で非表示" value="${escH(state.projectName)}" oninput="state.projectName=this.value;renderPreview()">`)}
     </div>
   </div>
-
   <div style="${section}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:12px;font-weight:700;color:#222;border-left:3px solid #1a1a1a;padding-left:8px">宛先（クライアント等）</div>
@@ -290,37 +251,32 @@ function renderBasic(){
     ${showClientPicker?`
     <div style="background:#f5f5f3;border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:10px">
       <input style="${inp};margin-bottom:6px" placeholder="会社名で検索..." value="${escH(clientSearch)}" oninput="clientSearch=this.value;renderAll()">
-      ${clientBook.filter(c=>c.name.includes(clientSearch)).length===0
-        ? `<div style="font-size:11px;color:#aaa;text-align:center;padding:8px">保存済みデータなし</div>`
-        : rowsHtml}
+      ${clientBook.filter(c=>c.name.includes(clientSearch)).length===0 ? `<div style="font-size:11px;color:#aaa;text-align:center;padding:8px">保存済みデータなし</div>` : rowsHtml}
     </div>`:''}
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
       ${field("会社名", `<input style="${inp}" value="${escH(state.clientName)}" oninput="state.clientName=this.value;renderPreview()">`)}
       <div>${lbl("敬称")}<select style="${inp}" onchange="state.clientHonorific=this.value;renderPreview()">${HONORIFICS.map(h=>`<option ${state.clientHonorific===h?'selected':''}>${h}</option>`).join('')}</select></div>
     </div>
-    ${clientBook.length>0&&!showClientPicker?`<div style="font-size:10px;color:#888;margin-top:5px">💡 「選択」で保存済みデータを呼び出せます（現在 ${clientBook.length} 件）</div>`:''}
   </div>
-
   <div style="${section}">
     <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">発行元（自社情報）</div>
-    ${[["会社名","issuerName","text"],["〒郵便番号","issuerZip","text"],["住所","issuerAddress","area"],["TEL","issuerTel","text"],["メール","issuerEmail","text"],["登録番号","issuerRegNo","text"],["振込先","issuerBank","area"]].map(([l,k,t])=>field(l,
-      t==='area'
-        ? `<textarea style="${inp};height:48px;resize:vertical" oninput="state.${k}=this.value;saveSettings();renderPreview()">${escH(state[k])}</textarea>`
-        : `<input style="${inp}" value="${escH(state[k])}" oninput="state.${k}=this.value;saveSettings();renderPreview()">`
-    )).join('')}
+    ${[["会社名","issuerName","text"],["〒郵便番号","issuerZip","text"],["住所","issuerAddress","area"],["TEL","issuerTel","text"],["メール","issuerEmail","text"],["登録番号","issuerRegNo","text"],["振込先","issuerBank","area"]].map(([l,k,t])=>field(l, t==='area' ? `<textarea style="${inp};height:48px;resize:vertical" oninput="state.${k}=this.value;saveSettings();renderPreview()">${escH(state[k])}</textarea>` : `<input style="${inp}" value="${escH(state[k])}" oninput="state.${k}=this.value;saveSettings();renderPreview()">`)).join('')}
   </div>`;
 }
 
-// ── Render ITEMS tab ──
 function renderItems(){
-  const subtotal=getSubtotal(), tax=getTax(), total=getTotal();
+  const subtotal=getSubtotal(), tax=getTax(), wh=getWithholding(), total=getTotal();
   const taxLbl=TAX_RATES.find(t=>t.value===state.taxRate)?.label||"";
   return `
   <div style="${section}">
     <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">明細設定</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${field("表ヘッダー名", `<input style="${inp}" value="${escH(state.colHeader)}" oninput="state.colHeader=this.value;saveSettings();renderPreview()">`)}
       <div>${lbl("消費税率")}<select style="${inp}" onchange="state.taxRate=Number(this.value);saveSettings();renderPreview()">${TAX_RATES.map(t=>`<option value="${t.value}" ${state.taxRate===t.value?'selected':''}>${t.label}</option>`).join('')}</select></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:6px;background:#f9f9f9;padding:8px;border-radius:4px;border:1px solid #eee">
+      <input type="checkbox" id="chk-wh" ${state.withholdingTax?'checked':''} onchange="state.withholdingTax=this.checked;saveSettings();renderAll()" style="accent-color:#1a1a1a;cursor:pointer">
+      <label for="chk-wh" style="font-size:11px;color:#333;cursor:pointer;font-weight:500">源泉徴収 (-10.21%) を自動計算する</label>
     </div>
   </div>
   <div style="${section}">
@@ -332,7 +288,11 @@ function renderItems(){
     <div style="background:#f9f9f9;border:1px solid #e5e5e5;border-radius:6px;padding:10px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:10px;color:#888">行 ${i+1}</span>
-        <button class="row-del" onclick="removeRow(${r.id})" style="background:#fff;border:1px solid #e0e0e0;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:inherit">削除</button>
+        <div style="display:flex;gap:4px">
+          <button class="row-btn" onclick="moveRow(${r.id},-1)" style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;color:#555">↑</button>
+          <button class="row-btn" onclick="moveRow(${r.id},1)" style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;color:#555">↓</button>
+          <button class="row-del" onclick="removeRow(${r.id})" style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;color:#777">削除</button>
+        </div>
       </div>
       <div style="margin-bottom:6px">${lbl(state.colHeader)}<input style="${inp}" value="${escH(r.name)}" oninput="updateRow(${r.id},'name',this.value)"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
@@ -343,14 +303,14 @@ function renderItems(){
       <div style="text-align:right;margin-top:5px;font-size:11px;font-weight:700">小計：${fmt(r.qty*r.unitPrice)}</div>
     </div>`).join('')}
     <div style="background:#1a1a1a;color:#fff;border-radius:6px;padding:10px 14px;font-size:11px">
-      <div style="display:flex;justify-content:space-between"><span>小計</span><span>${fmt(subtotal)}</span></div>
-      <div style="display:flex;justify-content:space-between;opacity:.7"><span>消費税 (${taxLbl})</span><span>${fmt(tax)}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:2px"><span>小計</span><span>${fmt(subtotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;opacity:.7;margin-bottom:2px"><span>消費税 (${taxLbl})</span><span>${fmt(tax)}</span></div>
+      ${state.withholdingTax ? `<div style="display:flex;justify-content:space-between;color:#ff9999;margin-bottom:2px"><span>源泉徴収税</span><span>-${fmt(wh)}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;font-weight:700;font-size:13px;margin-top:4px;border-top:1px solid #444;padding-top:4px"><span>合計</span><span>${fmt(total)}</span></div>
     </div>
   </div>`;
 }
 
-// ── Render EXTRA tab ──
 function renderExtra(){
   return `
   <div style="${section}">
@@ -386,35 +346,18 @@ function renderExtra(){
   </div>`;
 }
 
-// ── Render Preview ──
 function renderPreview(){
-  const subtotal=getSubtotal(), tax=getTax(), total=getTotal();
+  const subtotal=getSubtotal(), tax=getTax(), wh=getWithholding(), total=getTotal();
   const taxLbl=TAX_RATES.find(t=>t.value===state.taxRate)?.label||"";
   const emptyRows=Math.max(0,8-state.rows.length);
-  const logoH=`${state.logoSize}px`, logoW=`${Math.round(state.logoSize*3.85)}px`;
-  const stSz=`${state.stampSize}px`;
-  
+  const logoH=`${state.logoSize}px`, logoW=`${Math.round(state.logoSize*3.85)}px`, stSz=`${state.stampSize}px`;
   const texts = getDynamicTexts(state.docType);
 
-  const logoBlock = state.logoUrl
-    ? `<img src="${state.logoUrl}" alt="logo" style="max-height:${logoH};max-width:${logoW};width:auto;object-fit:contain;display:block">`
-    : `<div><div style="font-size:18px;letter-spacing:8px;font-weight:300">N A G A R E</div><div style="font-size:8px;letter-spacing:3px">INC.</div></div>`;
+  const logoBlock = state.logoUrl ? `<img src="${state.logoUrl}" alt="logo" style="max-height:${logoH};max-width:${logoW};width:auto;object-fit:contain;display:block">` : `<div><div style="font-size:18px;letter-spacing:8px;font-weight:300">N A G A R E</div><div style="font-size:8px;letter-spacing:3px">INC.</div></div>`;
+  const stampBlock = state.stampUrl ? `<img src="${state.stampUrl}" alt="stamp" style="position:absolute;top:6px;right:-8px;width:${stSz};height:${stSz};object-fit:contain;opacity:.85;mix-blend-mode:multiply">` : '';
 
-  const stampBlock = state.stampUrl
-    ? `<img src="${state.stampUrl}" alt="stamp" style="position:absolute;top:6px;right:-8px;width:${stSz};height:${stSz};object-fit:contain;opacity:.85;mix-blend-mode:multiply">`
-    : '';
-
-  const tableRows = state.rows.map((r,i)=>`
-    <tr style="background:${i%2===0?'#fff':'#fafafa'}">
-      <td style="padding:5px 8px;border:1px solid #ccc;text-align:center">${escH(r.name)}</td>
-      <td style="padding:5px 4px;border:1px solid #ccc;text-align:center">${r.qty}</td>
-      <td style="padding:5px 4px;border:1px solid #ccc;text-align:center">${escH(r.unit)}</td>
-      <td style="padding:5px 8px;border:1px solid #ccc;text-align:right">${r.unitPrice?fmt(r.unitPrice):''}</td>
-      <td style="padding:5px 8px;border:1px solid #ccc;text-align:right">${r.unitPrice?fmt(r.qty*r.unitPrice):''}</td>
-    </tr>`).join('');
-
-  const emptyRowsHtml = Array.from({length:emptyRows}).map(()=>`
-    <tr><td style="padding:5px 8px;border:1px solid #ccc">&nbsp;</td><td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td></tr>`).join('');
+  const tableRows = state.rows.map((r,i)=>`<tr style="background:${i%2===0?'#fff':'#fafafa'}"><td style="padding:5px 8px;border:1px solid #ccc;text-align:center">${escH(r.name)}</td><td style="padding:5px 4px;border:1px solid #ccc;text-align:center">${r.qty}</td><td style="padding:5px 4px;border:1px solid #ccc;text-align:center">${escH(r.unit)}</td><td style="padding:5px 8px;border:1px solid #ccc;text-align:right">${r.unitPrice?fmt(r.unitPrice):''}</td><td style="padding:5px 8px;border:1px solid #ccc;text-align:right">${r.unitPrice?fmt(r.qty*r.unitPrice):''}</td></tr>`).join('');
+  const emptyRowsHtml = Array.from({length:emptyRows}).map(()=>`<tr><td style="padding:5px 8px;border:1px solid #ccc">&nbsp;</td><td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td></tr>`).join('');
 
   document.getElementById('invoice-preview').innerHTML = `
     <div style="text-align:right;font-size:10px;margin-bottom:4mm">
@@ -460,6 +403,7 @@ function renderPreview(){
         ${tableRows}${emptyRowsHtml}
         <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">小計</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right">${fmt(subtotal)}</td></tr>
         <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">消費税（${taxLbl}）</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right">${fmt(tax)}</td></tr>
+        ${state.withholdingTax ? `<tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">源泉徴収税</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right;color:#c00">-${fmt(wh)}</td></tr>` : ''}
         <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">合計</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right;font-weight:bold">${fmt(total)}</td></tr>
       </tbody>
     </table>
@@ -469,88 +413,59 @@ function renderPreview(){
     </div>`;
 }
 
-// ── Render ALL ──
 function renderAll(){
   document.getElementById('panel-basic').innerHTML = renderBasic();
   document.getElementById('panel-items').innerHTML = renderItems();
   document.getElementById('panel-extra').innerHTML = renderExtra();
-  // restore display
-  ['basic','items','extra'].forEach(t=>{
-    document.getElementById('panel-'+t).style.display = t===state.activeTab?'':'none';
-  });
+  ['basic','items','extra'].forEach(t=>{ document.getElementById('panel-'+t).style.display = t===state.activeTab?'':'none'; });
   renderPreview();
 }
 
-// ── Helpers ──
+// ── Actions ──
 function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function setDocType(t){ 
   state.docType=t; 
-
-  // 根据选择的书类，智能切换期限日期
-  const d = new Date();
-  const nextNextMonthEnd = new Date(d.getFullYear(), d.getMonth() + 3, 0);
-  const nextNextMonthEndStr = `${nextNextMonthEnd.getFullYear()}年${String(nextNextMonthEnd.getMonth()+1).padStart(2,'0')}月${String(nextNextMonthEnd.getDate()).padStart(2,'0')}日`;
-  const thisMonthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  const thisMonthEndStr = `${thisMonthEnd.getFullYear()}年${String(thisMonthEnd.getMonth()+1).padStart(2,'0')}月${String(thisMonthEnd.getDate()).padStart(2,'0')}日`;
-
-  if (t === '請求書' && (!state.dueDate || state.dueDate === thisMonthEndStr)) {
-     state.dueDate = nextNextMonthEndStr; // 账单默认下下月底
-  } else if (t === '見積書' && (!state.dueDate || state.dueDate === nextNextMonthEndStr)) {
-     state.dueDate = thisMonthEndStr; // 报价单默认当月底
-  }
-
+  const d=new Date(), nEnd=new Date(d.getFullYear(),d.getMonth()+3,0), tEnd=new Date(d.getFullYear(),d.getMonth()+1,0);
+  const ns=`${nEnd.getFullYear()}年${String(nEnd.getMonth()+1).padStart(2,'0')}月${String(nEnd.getDate()).padStart(2,'0')}日`;
+  const ts=`${tEnd.getFullYear()}年${String(tEnd.getMonth()+1).padStart(2,'0')}月${String(tEnd.getDate()).padStart(2,'0')}日`;
+  if (t==='請求書' && (!state.dueDate||state.dueDate===ts)) state.dueDate=ns;
+  else if (t==='見積書' && (!state.dueDate||state.dueDate===ns)) state.dueDate=ts;
   renderAll(); 
 }
 function updateRow(id,field,val){
-  const r=state.rows.find(r=>r.id===id);
-  if(!r)return;
+  const r=state.rows.find(r=>r.id===id); if(!r)return;
   r[field]=(field==='qty'||field==='unitPrice')?Number(val)||0:val;
   renderPreview();
-  // update items subtotal display without full re-render
-  const el=document.getElementById('panel-items');
-  if(el.style.display!=='none') document.getElementById('panel-items').innerHTML=renderItems();
+  const el=document.getElementById('panel-items'); if(el.style.display!=='none') el.innerHTML=renderItems();
 }
-function addRow(){
-  state.rows.push({id:Date.now()+Math.random(),name:'',qty:1,unit:'人月',unitPrice:0});
-  renderAll();
-}
-function removeRow(id){
-  state.rows=state.rows.filter(r=>r.id!==id);
+function addRow(){ state.rows.push({id:Date.now()+Math.random(),name:'',qty:1,unit:'人月',unitPrice:0}); renderAll(); }
+function removeRow(id){ state.rows=state.rows.filter(r=>r.id!==id); renderAll(); }
+function moveRow(id, dir){
+  const idx = state.rows.findIndex(r=>r.id===id); if(idx<0) return;
+  const newIdx = idx + dir; if(newIdx<0 || newIdx>=state.rows.length) return;
+  const temp = state.rows[idx]; state.rows[idx] = state.rows[newIdx]; state.rows[newIdx] = temp;
   renderAll();
 }
 function pickFile(type){
-  const el=document.getElementById(type+'-file');
-  el.value='';
+  const el=document.getElementById(type+'-file'); el.value='';
   el.onchange=e=>{
     const f=e.target.files[0]; if(!f)return;
-    if(!f.name.toLowerCase().endsWith('.png')||f.type!=='image/png'){ alert('PNG形式のファイルのみアップロードできます。'); return; }
-    const r=new FileReader();
-    r.onload=ev=>{ state[type==='logo'?'logoUrl':'stampUrl']=ev.target.result; saveSettings(); renderAll(); };
+    if(!f.name.toLowerCase().endsWith('.png')){ alert('PNG形式のファイルのみです。'); return; }
+    const r=new FileReader(); r.onload=ev=>{ state[type==='logo'?'logoUrl':'stampUrl']=ev.target.result; saveSettings(); renderAll(); };
     r.readAsDataURL(f);
-  };
-  el.click();
+  }; el.click();
 }
 function toggleClientPicker(){ showClientPicker=!showClientPicker; clientSearch=''; renderAll(); }
 function loadClient(name,hon){ state.clientName=name; state.clientHonorific=hon; showClientPicker=false; clientSearch=''; renderAll(); }
-function deleteClient(name){
-  if(!confirm(`「${name}」を削除しますか？`))return;
-  clientBook=clientBook.filter(c=>c.name!==name);
-  saveClientBook(); renderAll();
-}
+function deleteClient(name){ if(confirm(`「${name}」を削除しますか？`)){ clientBook=clientBook.filter(c=>c.name!==name); saveClientBook(); renderAll(); } }
 function saveCurrentClient(){
   if(!state.clientName.trim())return;
-  const c={name:state.clientName, honorific:state.clientHonorific};
-  const idx=clientBook.findIndex(x=>x.name===state.clientName);
-  if(idx>=0){ if(!confirm(`「${state.clientName}」を上書き保存しますか？`))return; clientBook[idx]=c; }
-  else clientBook.push(c);
-  saveClientBook(); alert(`「${state.clientName}」を保存しました`); renderAll();
+  const c={name:state.clientName, honorific:state.clientHonorific}, idx=clientBook.findIndex(x=>x.name===state.clientName);
+  if(idx>=0){ if(!confirm(`上書き保存しますか？`))return; clientBook[idx]=c; } else clientBook.push(c);
+  saveClientBook(); alert(`保存しました`); renderAll();
 }
 function doPrint(){ window.print(); }
-function resetSettings(){
-  if(!confirm('保存設定を初期化しますか？'))return;
-  localStorage.removeItem(STORAGE_KEY);
-  location.reload();
-}
+function resetSettings(){ if(confirm('すべてのデータと設定を消去しますか？')){ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(CLIENT_KEY); location.reload(); } }
 
 // ── Init ──
 loadSettings();
