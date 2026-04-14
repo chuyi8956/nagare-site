@@ -81,7 +81,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
   <div id="right-panel">
     <div id="preview-wrap">
-      <div id="invoice-preview" style="width:210mm;min-height:297mm;background:#fff;font-family:'Noto Serif JP','Hiragino Mincho ProN',serif;font-size:11px;color:#111;padding:14mm 14mm 10mm 14mm;box-sizing:border-box;position:relative"></div>
+      <div id="invoice-preview" style="width:210mm;min-height:297mm;background:#fff;font-family:'Helvetica Neue', Arial, 'Noto Serif JP', 'Hiragino Mincho ProN', serif;font-size:11px;color:#111;padding:14mm 14mm 10mm 14mm;box-sizing:border-box;position:relative"></div>
     </div>
   </div>
 </div>
@@ -211,29 +211,29 @@ function showTab(tab){
   });
 }
 
-// ── Render Helpers ──
-const inp="width:100%;padding:6px 8px;border:1px solid #d0d0d0;border-radius:4px;font-size:12px;background:#fafafa;box-sizing:border-box;font-family:inherit";
+// ── Render Helpers (Updated input ergonomics) ──
+const inp="width:100%;padding:8px 10px;border:1px solid #d0d0d0;border-radius:4px;font-size:13px;background:#fafafa;box-sizing:border-box;font-family:inherit";
 const section="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:14px;margin-bottom:10px";
-function lbl(text){ return `<div style="font-size:11px;color:#555;margin-bottom:3px;font-weight:500">${text}</div>`; }
-function field(lbl_text, inp_html){ return `<div style="margin-bottom:7px">${lbl(lbl_text)}${inp_html}</div>`; }
+function lbl(text){ return `<div style="font-size:11px;color:#555;margin-bottom:4px;font-weight:500">${text}</div>`; }
+function field(lbl_text, inp_html){ return `<div style="margin-bottom:10px">${lbl(lbl_text)}${inp_html}</div>`; }
 
 function renderBasic(){
   let rowsHtml = clientBook.filter(c=>c.name.includes(clientSearch)).map(c=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 6px;border-radius:4px;background:#fff;border:1px solid #eee;margin-bottom:4px">
-      <span style="font-size:12px;flex:1;cursor:pointer" onclick="loadClient('${c.name.replace(/'/g,"\\'")}','${c.honorific}')">${c.name}　${c.honorific}</span>
-      <button onclick="deleteClient('${c.name.replace(/'/g,"\\'")}','${c.honorific}')" style="background:none;border:none;color:#c00;font-size:11px;cursor:pointer;padding:0 4px">✕</button>
+      <span style="font-size:13px;flex:1;cursor:pointer" onclick="loadClient('${c.name.replace(/'/g,"\\'")}','${c.honorific}')">${c.name}　${c.honorific}</span>
+      <button onclick="deleteClient('${c.name.replace(/'/g,"\\'")}','${c.honorific}')" style="background:none;border:none;color:#c00;font-size:12px;cursor:pointer;padding:0 4px">✕</button>
     </div>`).join('');
   const texts = getDynamicTexts(state.docType);
   return `
   <div style="${section}">
-    <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">書類設定</div>
-    <div style="margin-bottom:8px">
+    <div style="font-size:13px;font-weight:700;color:#222;margin-bottom:12px;border-left:3px solid #1a1a1a;padding-left:8px">書類設定</div>
+    <div style="margin-bottom:10px">
       ${lbl("書類種別")}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${DOC_TYPES.map(t=>`<button onclick="setDocType('${t}')" style="padding:4px 10px;border-radius:4px;border:1px solid ${state.docType===t?'#1a1a1a':'#ccc'};background:${state.docType===t?'#1a1a1a':'#fff'};color:${state.docType===t?'#fff':'#333'};font-size:11px;cursor:pointer;font-family:inherit">${t}</button>`).join('')}
+        ${DOC_TYPES.map(t=>`<button onclick="setDocType('${t}')" style="padding:6px 12px;border-radius:4px;border:1px solid ${state.docType===t?'#1a1a1a':'#ccc'};background:${state.docType===t?'#1a1a1a':'#fff'};color:${state.docType===t?'#fff':'#333'};font-size:12px;cursor:pointer;font-family:inherit">${t}</button>`).join('')}
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       ${field("発行日", `<input style="${inp}" value="${escH(state.issueDate)}" oninput="state.issueDate=this.value;renderPreview()">`)}
       ${field("書類番号", `<input style="${inp}" value="${escH(state.invoiceNo)}" oninput="state.invoiceNo=this.value;renderPreview()">`)}
       ${texts.deadlineLabel ? field(texts.deadlineLabel, `<input style="${inp}" placeholder="空欄で非表示" value="${escH(state.dueDate)}" oninput="state.dueDate=this.value;renderPreview()">`) : '<div></div>'}
@@ -241,26 +241,26 @@ function renderBasic(){
     </div>
   </div>
   <div style="${section}">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:#222;border-left:3px solid #1a1a1a;padding-left:8px">宛先（クライアント等）</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#222;border-left:3px solid #1a1a1a;padding-left:8px">宛先（クライアント等）</div>
       <div style="display:flex;gap:5px">
-        <button onclick="toggleClientPicker()" style="padding:3px 9px;background:${showClientPicker?'#1a1a1a':'#fff'};color:${showClientPicker?'#fff':'#333'};border:1px solid #ccc;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit">📋 選択</button>
-        <button onclick="saveCurrentClient()" style="padding:3px 9px;background:#fff;color:#333;border:1px solid #ccc;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit">💾 保存</button>
+        <button onclick="toggleClientPicker()" style="padding:5px 10px;background:${showClientPicker?'#1a1a1a':'#fff'};color:${showClientPicker?'#fff':'#333'};border:1px solid #ccc;border-radius:4px;font-size:12px;cursor:pointer;font-family:inherit">📋 選択</button>
+        <button onclick="saveCurrentClient()" style="padding:5px 10px;background:#fff;color:#333;border:1px solid #ccc;border-radius:4px;font-size:12px;cursor:pointer;font-family:inherit">💾 保存</button>
       </div>
     </div>
     ${showClientPicker?`
-    <div style="background:#f5f5f3;border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:10px">
-      <input style="${inp};margin-bottom:6px" placeholder="会社名で検索..." value="${escH(clientSearch)}" oninput="clientSearch=this.value;renderAll()">
-      ${clientBook.filter(c=>c.name.includes(clientSearch)).length===0 ? `<div style="font-size:11px;color:#aaa;text-align:center;padding:8px">保存済みデータなし</div>` : rowsHtml}
+    <div style="background:#f5f5f3;border:1px solid #ddd;border-radius:6px;padding:10px;margin-bottom:12px">
+      <input style="${inp};margin-bottom:8px" placeholder="会社名で検索..." value="${escH(clientSearch)}" oninput="clientSearch=this.value;renderAll()">
+      ${clientBook.filter(c=>c.name.includes(clientSearch)).length===0 ? `<div style="font-size:12px;color:#aaa;text-align:center;padding:8px">保存済みデータなし</div>` : rowsHtml}
     </div>`:''}
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
       ${field("会社名", `<input style="${inp}" value="${escH(state.clientName)}" oninput="state.clientName=this.value;renderPreview()">`)}
       <div>${lbl("敬称")}<select style="${inp}" onchange="state.clientHonorific=this.value;renderPreview()">${HONORIFICS.map(h=>`<option ${state.clientHonorific===h?'selected':''}>${h}</option>`).join('')}</select></div>
     </div>
   </div>
   <div style="${section}">
-    <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">発行元（自社情報）</div>
-    ${[["会社名","issuerName","text"],["〒郵便番号","issuerZip","text"],["住所","issuerAddress","area"],["TEL","issuerTel","text"],["メール","issuerEmail","text"],["登録番号","issuerRegNo","text"],["振込先","issuerBank","area"]].map(([l,k,t])=>field(l, t==='area' ? `<textarea style="${inp};height:48px;resize:vertical" oninput="state.${k}=this.value;saveSettings();renderPreview()">${escH(state[k])}</textarea>` : `<input style="${inp}" value="${escH(state[k])}" oninput="state.${k}=this.value;saveSettings();renderPreview()">`)).join('')}
+    <div style="font-size:13px;font-weight:700;color:#222;margin-bottom:12px;border-left:3px solid #1a1a1a;padding-left:8px">発行元（自社情報）</div>
+    ${[["会社名","issuerName","text"],["〒郵便番号","issuerZip","text"],["住所","issuerAddress","area"],["TEL","issuerTel","text"],["メール","issuerEmail","text"],["登録番号","issuerRegNo","text"],["振込先","issuerBank","area"]].map(([l,k,t])=>field(l, t==='area' ? `<textarea style="${inp};height:54px;resize:vertical" oninput="state.${k}=this.value;saveSettings();renderPreview()">${escH(state[k])}</textarea>` : `<input style="${inp}" value="${escH(state[k])}" oninput="state.${k}=this.value;saveSettings();renderPreview()">`)).join('')}
   </div>`;
 }
 
@@ -269,44 +269,44 @@ function renderItems(){
   const taxLbl=TAX_RATES.find(t=>t.value===state.taxRate)?.label||"";
   return `
   <div style="${section}">
-    <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">明細設定</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div style="font-size:13px;font-weight:700;color:#222;margin-bottom:12px;border-left:3px solid #1a1a1a;padding-left:8px">明細設定</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       ${field("表ヘッダー名", `<input style="${inp}" value="${escH(state.colHeader)}" oninput="state.colHeader=this.value;saveSettings();renderPreview()">`)}
       <div>${lbl("消費税率")}<select style="${inp}" onchange="state.taxRate=Number(this.value);saveSettings();renderPreview()">${TAX_RATES.map(t=>`<option value="${t.value}" ${state.taxRate===t.value?'selected':''}>${t.label}</option>`).join('')}</select></div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-top:6px;background:#f9f9f9;padding:8px;border-radius:4px;border:1px solid #eee">
-      <input type="checkbox" id="chk-wh" ${state.withholdingTax?'checked':''} onchange="state.withholdingTax=this.checked;saveSettings();renderAll()" style="accent-color:#1a1a1a;cursor:pointer">
-      <label for="chk-wh" style="font-size:11px;color:#333;cursor:pointer;font-weight:500">源泉徴収 (-10.21%) を自動計算する</label>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;background:#f9f9f9;padding:10px;border-radius:4px;border:1px solid #eee">
+      <input type="checkbox" id="chk-wh" ${state.withholdingTax?'checked':''} onchange="state.withholdingTax=this.checked;saveSettings();renderAll()" style="accent-color:#1a1a1a;cursor:pointer;width:14px;height:14px">
+      <label for="chk-wh" style="font-size:12px;color:#333;cursor:pointer;font-weight:500">源泉徴収 (-10.21%) を自動計算する</label>
     </div>
   </div>
   <div style="${section}">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:#222;border-left:3px solid #1a1a1a;padding-left:8px">明細行</div>
-      <button onclick="addRow()" style="padding:4px 10px;background:#1a1a1a;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit">＋追加</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#222;border-left:3px solid #1a1a1a;padding-left:8px">明細行</div>
+      <button onclick="addRow()" style="padding:6px 12px;background:#1a1a1a;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-family:inherit">＋追加</button>
     </div>
     ${state.rows.map((r,i)=>`
-    <div style="background:#f9f9f9;border:1px solid #e5e5e5;border-radius:6px;padding:10px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-size:10px;color:#888">行 ${i+1}</span>
+    <div style="background:#f9f9f9;border:1px solid #e5e5e5;border-radius:6px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;color:#888">行 ${i+1}</span>
         <div style="display:flex;gap:4px">
-          <button class="row-btn" onclick="moveRow(${r.id},-1)" style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;color:#555">↑</button>
-          <button class="row-btn" onclick="moveRow(${r.id},1)" style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;color:#555">↓</button>
-          <button class="row-del" onclick="removeRow(${r.id})" style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;color:#777">削除</button>
+          <button class="row-btn" onclick="moveRow(${r.id},-1)" style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px;color:#555">↑</button>
+          <button class="row-btn" onclick="moveRow(${r.id},1)" style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px;color:#555">↓</button>
+          <button class="row-del" onclick="removeRow(${r.id})" style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px;color:#777">削除</button>
         </div>
       </div>
-      <div style="margin-bottom:6px">${lbl(state.colHeader)}<input style="${inp}" value="${escH(r.name)}" oninput="updateRow(${r.id},'name',this.value)"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+      <div style="margin-bottom:8px">${lbl(state.colHeader)}<input style="${inp}" value="${escH(r.name)}" oninput="updateRow(${r.id},'name',this.value)"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
         ${field("数量", `<input style="${inp}" type="number" value="${r.qty}" oninput="updateRow(${r.id},'qty',this.value)">`)}
         ${field("単位", `<input style="${inp}" value="${escH(r.unit)}" oninput="updateRow(${r.id},'unit',this.value)">`)}
         ${field("単価 (¥)", `<input style="${inp}" type="number" value="${r.unitPrice}" oninput="updateRow(${r.id},'unitPrice',this.value)">`)}
       </div>
-      <div style="text-align:right;margin-top:5px;font-size:11px;font-weight:700">小計：${fmt(r.qty*r.unitPrice)}</div>
+      <div style="text-align:right;margin-top:6px;font-size:13px;font-weight:700">小計：${fmt(r.qty*r.unitPrice)}</div>
     </div>`).join('')}
-    <div style="background:#1a1a1a;color:#fff;border-radius:6px;padding:10px 14px;font-size:11px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:2px"><span>小計</span><span>${fmt(subtotal)}</span></div>
-      <div style="display:flex;justify-content:space-between;opacity:.7;margin-bottom:2px"><span>消費税 (${taxLbl})</span><span>${fmt(tax)}</span></div>
-      ${state.withholdingTax ? `<div style="display:flex;justify-content:space-between;color:#ff9999;margin-bottom:2px"><span>源泉徴収税</span><span>-${fmt(wh)}</span></div>` : ''}
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:13px;margin-top:4px;border-top:1px solid #444;padding-top:4px"><span>合計</span><span>${fmt(total)}</span></div>
+    <div style="background:#1a1a1a;color:#fff;border-radius:6px;padding:12px 16px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>小計</span><span>${fmt(subtotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;opacity:.7;margin-bottom:4px"><span>消費税 (${taxLbl})</span><span>${fmt(tax)}</span></div>
+      ${state.withholdingTax ? `<div style="display:flex;justify-content:space-between;color:#ff9999;margin-bottom:4px"><span>源泉徴収税</span><span>-${fmt(wh)}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;margin-top:6px;border-top:1px solid #444;padding-top:6px"><span>合計</span><span>${fmt(total)}</span></div>
     </div>
   </div>`;
 }
@@ -314,38 +314,39 @@ function renderItems(){
 function renderExtra(){
   return `
   <div style="${section}">
-    <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">ロゴ・印章</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:700;color:#222;margin-bottom:12px;border-left:3px solid #1a1a1a;padding-left:8px">ロゴ・印章</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div>${lbl("会社ロゴ")}
-        <button onclick="pickFile('logo')" style="width:100%;padding:28px 0;border:2px dashed #ccc;border-radius:6px;background:#fafafa;cursor:pointer;font-size:11px;color:#777;font-family:inherit">${state.logoUrl?'✅ 変更する':'🖼 アップロード'}</button>
-        ${state.logoUrl?`<img src="${state.logoUrl}" alt="" style="margin-top:6px;max-width:100%;max-height:40px;object-fit:contain">`:''}
+        <button onclick="pickFile('logo')" style="width:100%;padding:32px 0;border:2px dashed #ccc;border-radius:6px;background:#fafafa;cursor:pointer;font-size:12px;color:#777;font-family:inherit">${state.logoUrl?'✅ 変更する':'🖼 アップロード'}</button>
+        ${state.logoUrl?`<img src="${state.logoUrl}" alt="" style="margin-top:8px;max-width:100%;max-height:40px;object-fit:contain">`:''}
       </div>
       <div>${lbl("印章 (PNG)")}
-        <button onclick="pickFile('stamp')" style="width:100%;padding:28px 0;border:2px dashed #ccc;border-radius:6px;background:#fafafa;cursor:pointer;font-size:11px;color:#777;font-family:inherit">${state.stampUrl?'✅ 変更する':'🔴 アップロード'}</button>
-        ${state.stampUrl?`<img src="${state.stampUrl}" alt="" style="margin-top:6px;max-width:100%;max-height:50px;object-fit:contain">`:''}
+        <button onclick="pickFile('stamp')" style="width:100%;padding:32px 0;border:2px dashed #ccc;border-radius:6px;background:#fafafa;cursor:pointer;font-size:12px;color:#777;font-family:inherit">${state.stampUrl?'✅ 変更する':'🔴 アップロード'}</button>
+        ${state.stampUrl?`<img src="${state.stampUrl}" alt="" style="margin-top:8px;max-width:100%;max-height:50px;object-fit:contain">`:''}
       </div>
     </div>
-    <div style="margin-bottom:6px">
-      ${state.logoUrl?`<button onclick="state.logoUrl='';saveSettings();renderAll()" style="font-size:10px;color:#c00;background:none;border:none;cursor:pointer;margin-right:12px">ロゴを削除</button>`:''}
-      ${state.stampUrl?`<button onclick="state.stampUrl='';saveSettings();renderAll()" style="font-size:10px;color:#c00;background:none;border:none;cursor:pointer">印章を削除</button>`:''}
+    <div style="margin-bottom:8px">
+      ${state.logoUrl?`<button onclick="state.logoUrl='';saveSettings();renderAll()" style="font-size:11px;color:#c00;background:none;border:none;cursor:pointer;margin-right:14px">ロゴを削除</button>`:''}
+      ${state.stampUrl?`<button onclick="state.stampUrl='';saveSettings();renderAll()" style="font-size:11px;color:#c00;background:none;border:none;cursor:pointer">印章を削除</button>`:''}
     </div>
-    <div style="border-top:1px solid #eee;padding-top:10px">
-      <div style="margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#555;font-weight:500">ロゴサイズ</span><span style="font-size:11px;color:#333">${state.logoSize}px</span></div>
+    <div style="border-top:1px solid #eee;padding-top:12px">
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:#555;font-weight:500">ロゴサイズ</span><span style="font-size:12px;color:#333">${state.logoSize}px</span></div>
         <input type="range" min="24" max="90" step="2" value="${state.logoSize}" oninput="state.logoSize=Number(this.value);saveSettings();renderAll()" style="width:100%;accent-color:#1a1a1a">
       </div>
       <div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:#555;font-weight:500">印章サイズ</span><span style="font-size:11px;color:#333">${state.stampSize}px</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:#555;font-weight:500">印章サイズ</span><span style="font-size:12px;color:#333">${state.stampSize}px</span></div>
         <input type="range" min="40" max="120" step="2" value="${state.stampSize}" oninput="state.stampSize=Number(this.value);saveSettings();renderAll()" style="width:100%;accent-color:#c00">
       </div>
     </div>
   </div>
   <div style="${section}">
-    <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:10px;border-left:3px solid #1a1a1a;padding-left:8px">備考・その他</div>
-    <textarea style="${inp};height:100px;resize:vertical" oninput="state.remarks=this.value;renderPreview()" placeholder="支払い条件、特記事項など...">${escH(state.remarks)}</textarea>
+    <div style="font-size:13px;font-weight:700;color:#222;margin-bottom:12px;border-left:3px solid #1a1a1a;padding-left:8px">備考・その他</div>
+    <textarea style="${inp};height:120px;resize:vertical" oninput="state.remarks=this.value;renderPreview()" placeholder="支払い条件、特記事項など...">${escH(state.remarks)}</textarea>
   </div>`;
 }
 
+// ── 核心预览区重构：极简表格 + 印章叠底 + 现代字体混排 ──
 function renderPreview(){
   const subtotal=getSubtotal(), tax=getTax(), wh=getWithholding(), total=getTotal();
   const taxLbl=TAX_RATES.find(t=>t.value===state.taxRate)?.label||"";
@@ -354,62 +355,85 @@ function renderPreview(){
   const texts = getDynamicTexts(state.docType);
 
   const logoBlock = state.logoUrl ? `<img src="${state.logoUrl}" alt="logo" style="max-height:${logoH};max-width:${logoW};width:auto;object-fit:contain;display:block">` : `<div><div style="font-size:18px;letter-spacing:8px;font-weight:300">N A G A R E</div><div style="font-size:8px;letter-spacing:3px">INC.</div></div>`;
-  const stampBlock = state.stampUrl ? `<img src="${state.stampUrl}" alt="stamp" style="position:absolute;top:6px;right:-8px;width:${stSz};height:${stSz};object-fit:contain;opacity:.85;mix-blend-mode:multiply">` : '';
+  
+  // 印章：绝对定位使其脱离文档流，叠加在文字上方 (top: -10px, right: 10px)
+  const stampBlock = state.stampUrl ? `<img src="${state.stampUrl}" alt="stamp" style="position:absolute;top:-10px;right:10px;width:${stSz};height:${stSz};object-fit:contain;opacity:0.9;mix-blend-mode:multiply;z-index:2;pointer-events:none;">` : '';
 
-  const tableRows = state.rows.map((r,i)=>`<tr style="background:${i%2===0?'#fff':'#fafafa'}"><td style="padding:5px 8px;border:1px solid #ccc;text-align:center">${escH(r.name)}</td><td style="padding:5px 4px;border:1px solid #ccc;text-align:center">${r.qty}</td><td style="padding:5px 4px;border:1px solid #ccc;text-align:center">${escH(r.unit)}</td><td style="padding:5px 8px;border:1px solid #ccc;text-align:right">${r.unitPrice?fmt(r.unitPrice):''}</td><td style="padding:5px 8px;border:1px solid #ccc;text-align:right">${r.unitPrice?fmt(r.qty*r.unitPrice):''}</td></tr>`).join('');
-  const emptyRowsHtml = Array.from({length:emptyRows}).map(()=>`<tr><td style="padding:5px 8px;border:1px solid #ccc">&nbsp;</td><td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td></tr>`).join('');
+  // 极简现代表格风格 (无左右框线，仅行底线)
+  const tableRows = state.rows.map((r,i)=>`
+    <tr style="border-bottom:1px solid #eee;background:${i%2===0?'#fff':'#fafafa'}">
+      <td style="padding:8px;text-align:left">${escH(r.name)}</td>
+      <td style="padding:8px 4px;text-align:center">${r.qty}</td>
+      <td style="padding:8px 4px;text-align:center">${escH(r.unit)}</td>
+      <td style="padding:8px;text-align:right">${r.unitPrice?fmt(r.unitPrice):''}</td>
+      <td style="padding:8px;text-align:right">${r.unitPrice?fmt(r.qty*r.unitPrice):''}</td>
+    </tr>`).join('');
+
+  const emptyRowsHtml = Array.from({length:emptyRows}).map(()=>`
+    <tr style="border-bottom:1px solid #eee;">
+      <td style="padding:8px">&nbsp;</td><td></td><td></td><td></td><td></td>
+    </tr>`).join('');
 
   document.getElementById('invoice-preview').innerHTML = `
-    <div style="text-align:right;font-size:10px;margin-bottom:4mm">
+    <div style="text-align:right;font-size:11px;margin-bottom:5mm;color:#555;">
       <div>${texts.dateLabel ? escH(texts.dateLabel) + '：　' : ''}${escH(state.issueDate)}</div>
       <div>${escH(texts.noLabel)}：　${escH(state.invoiceNo)}</div>
     </div>
-    <div style="text-align:center;font-size:28px;font-weight:bold;letter-spacing:8px;margin-bottom:6mm">${escH(state.docType)}</div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4mm">
+    
+    <div style="text-align:center;font-size:28px;font-weight:bold;letter-spacing:8px;margin-bottom:8mm">${escH(state.docType)}</div>
+    
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8mm">
       <div>
-        <div style="font-size:20px;font-weight:bold;border-bottom:2px solid #111;padding-bottom:2px;margin-bottom:3mm;display:inline-block">
+        <div style="font-size:20px;font-weight:bold;border-bottom:2px solid #111;padding-bottom:4px;margin-bottom:4mm;display:inline-block">
           ${escH(state.clientName)}　<span style="font-size:18px">${escH(state.clientHonorific)}</span>
         </div>
-        ${state.projectName?`<div style="font-size:10px;margin-bottom:2mm">案件名：${escH(state.projectName)}</div>`:''}
-        <div style="font-size:10px;margin-bottom:1mm">${escH(texts.greeting)}</div>
-        <div style="font-size:10px">${escH(texts.amtLabel)}</div>
-        <div style="font-size:16px;font-weight:bold;border-bottom:1.5px solid #111;display:inline-block;min-width:140px;text-align:right;margin-top:1mm">￥${Math.round(total).toLocaleString("ja-JP")} -</div>
-        ${state.dueDate && texts.deadlineLabel ?`<div style="font-size:9.5px;margin-top:2mm">${escH(texts.deadlineLabel)}：${escH(state.dueDate)}</div>`:''}
+        ${state.projectName?`<div style="font-size:11px;margin-bottom:2mm">案件名：${escH(state.projectName)}</div>`:''}
+        <div style="font-size:11px;margin-bottom:1mm">${escH(texts.greeting)}</div>
+        <div style="font-size:11px;margin-top:4mm">${escH(texts.amtLabel)}</div>
+        
+        <div style="font-size:22px;font-weight:bold;border-bottom:1.5px solid #111;display:inline-block;min-width:160px;text-align:right;margin-top:1mm;padding-bottom:2px;">
+          ￥${Math.round(total).toLocaleString("ja-JP")} -
+        </div>
+        
+        ${state.dueDate && texts.deadlineLabel ?`<div style="font-size:10px;margin-top:3mm;color:#555;">${escH(texts.deadlineLabel)}：${escH(state.dueDate)}</div>`:''}
       </div>
-      <div style="text-align:left;font-size:9.5px;line-height:1.7;position:relative;min-width:180px">
-        <div style="margin-bottom:3mm">${logoBlock}</div>
-        <div style="position:relative;padding-right:${state.stampUrl?stSz:'0'}">
-          <div style="font-weight:bold;font-size:11px">${escH(state.issuerName)}</div>
+      
+      <div style="text-align:left;font-size:10px;line-height:1.7;position:relative;min-width:190px">
+        <div style="margin-bottom:4mm">${logoBlock}</div>
+        <div style="position:relative;">
+          <div style="font-weight:bold;font-size:12px;margin-bottom:2px">${escH(state.issuerName)}</div>
           <div>${escH(state.issuerZip)}</div>
-          <div style="max-width:160px">${escH(state.issuerAddress)}</div>
+          <div style="max-width:170px">${escH(state.issuerAddress)}</div>
           <div>${escH(state.issuerTel)}</div>
           <div>${escH(state.issuerEmail)}</div>
-          ${state.issuerRegNo?`<div>登録番号：${escH(state.issuerRegNo)}</div>`:''}
+          ${state.issuerRegNo?`<div style="margin-top:2px">登録番号：${escH(state.issuerRegNo)}</div>`:''}
           ${stampBlock}
         </div>
       </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:10px">
+    
+    <table style="width:100%;border-collapse:collapse;font-size:11px">
       <thead>
-        <tr style="background:#222;color:#fff">
-          <th style="padding:5px 8px;text-align:center;border:1px solid #555;width:38%">${escH(state.colHeader)}</th>
-          <th style="padding:5px 4px;text-align:center;border:1px solid #555;width:8%">数量</th>
-          <th style="padding:5px 4px;text-align:center;border:1px solid #555;width:8%">単位</th>
-          <th style="padding:5px 8px;text-align:center;border:1px solid #555;width:23%">単価</th>
-          <th style="padding:5px 8px;text-align:center;border:1px solid #555;width:23%">金額</th>
+        <tr style="border-bottom:2px solid #333;color:#111;">
+          <th style="padding:8px 8px;text-align:left;font-weight:bold;width:38%">${escH(state.colHeader)}</th>
+          <th style="padding:8px 4px;text-align:center;font-weight:bold;width:8%">数量</th>
+          <th style="padding:8px 4px;text-align:center;font-weight:bold;width:8%">単位</th>
+          <th style="padding:8px 8px;text-align:right;font-weight:bold;width:23%">単価</th>
+          <th style="padding:8px 8px;text-align:right;font-weight:bold;width:23%">金額</th>
         </tr>
       </thead>
       <tbody>
         ${tableRows}${emptyRowsHtml}
-        <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">小計</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right">${fmt(subtotal)}</td></tr>
-        <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">消費税（${taxLbl}）</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right">${fmt(tax)}</td></tr>
-        ${state.withholdingTax ? `<tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">源泉徴収税</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right;color:#c00">-${fmt(wh)}</td></tr>` : ''}
-        <tr><td colspan="3" style="border:none"></td><td style="padding:4px 8px;border:1px solid #ccc;text-align:center;font-weight:bold">合計</td><td style="padding:4px 8px;border:1px solid #ccc;text-align:right;font-weight:bold">${fmt(total)}</td></tr>
+        <tr><td colspan="3" style="border:none"></td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;color:#555;">小計</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${fmt(subtotal)}</td></tr>
+        <tr><td colspan="3" style="border:none"></td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;color:#555;">消費税（${taxLbl}）</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${fmt(tax)}</td></tr>
+        ${state.withholdingTax ? `<tr><td colspan="3" style="border:none"></td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;color:#555;">源泉徴収税</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;color:#c00">-${fmt(wh)}</td></tr>` : ''}
+        <tr><td colspan="3" style="border:none"></td><td style="padding:8px 8px;border-bottom:1.5px solid #111;text-align:right;font-weight:bold;font-size:12px">合計</td><td style="padding:8px 8px;border-bottom:1.5px solid #111;text-align:right;font-weight:bold;font-size:12px">${fmt(total)}</td></tr>
       </tbody>
     </table>
-    <div style="margin-top:8mm;font-size:9.5px;line-height:1.8">
-      ${state.issuerBank?`<div>お振込先：</div><div>${escH(state.issuerBank)}</div>`:''}
-      ${state.remarks?`<div style="margin-top:3mm;white-space:pre-wrap">${escH(state.remarks)}</div>`:''}
+    
+    <div style="margin-top:10mm;font-size:10px;line-height:1.8">
+      ${state.issuerBank?`<div>【お振込先】</div><div>${escH(state.issuerBank)}</div>`:''}
+      ${state.remarks?`<div style="margin-top:4mm;white-space:pre-wrap;padding:10px;background:#fafafa;border:1px solid #eee;border-radius:4px">${escH(state.remarks)}</div>`:''}
     </div>`;
 }
 
